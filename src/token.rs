@@ -8,6 +8,12 @@ pub struct Token<'a> {
     pub tags: Vec<&'a str>
 }
 
+impl Default for Token<'_> {
+    fn default() -> Self {
+        empty_token()
+    }
+}
+
 impl <'a>Token<'a> {
     pub fn content(&'a self) -> &'a str {
         &self.body[self.indices.clone()]
@@ -15,6 +21,18 @@ impl <'a>Token<'a> {
 
     pub fn has_tag(&self, tag: &str) -> bool {
         self.tags.contains(&tag)
+    }
+
+    pub fn single_char(&self) -> Option<char> {
+        self.content().chars().next()
+    }
+}
+
+pub fn empty_token() -> Token<'static> {
+    Token {
+        body: "",
+        indices: 0..0,
+        tags: vec![]
     }
 }
 
@@ -51,21 +69,13 @@ pub fn str_to_tokens<'a>(body: &'a str) -> Vec<Token> {
             tags: vec![&body[index..index + 1]]
         });
     }
-    tokens.push(Token {
-        body: "",
-        indices: 0..0,
-        tags: vec![]
-    });
+    tokens.push(empty_token());
     tokens
 }
 
 pub fn wrap<'a>(tokens: Vec<Token<'a>>, tags: Vec<&'a str>) -> Token<'a> {
     if tokens.is_empty() {
-        return Token {
-            body: "",
-            indices: 0..0,
-            tags
-        };
+        return empty_token();
     }
     Token { 
         body: tokens[0].body, 

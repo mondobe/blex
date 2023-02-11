@@ -40,6 +40,8 @@ pub fn process_rules(rules: Vec<impl Fn(Vec<Token>) -> Option<Vec<Token>>>, body
 
 #[cfg(test)]
 mod tests {
+    use std::hint::black_box;
+
     use super::*;
 
     fn token1() -> Token<'static> {
@@ -78,26 +80,22 @@ mod tests {
     }
 
     fn whitespace_rule(mut tokens: Vec<Token>) -> Option<Vec<Token>> {
-        if tokens[0].content().is_empty() {
+        let ch = tokens[0].single_char().unwrap_or_default();
+        if ch.is_whitespace() || ch == '\u{0}' {
             tokens[0].tags.push("ws");
-        } else if tokens[0].content().chars().collect::<Vec<char>>()[0].is_whitespace() {
-            tokens[0].tags.push("ws");
-        } 
-        Some(vec![tokens[0].clone()])
+        }
+        Some(tokens)
     }
 
     fn letter_rule(mut tokens: Vec<Token>) -> Option<Vec<Token>> {
-        if tokens[0].content().is_empty() {
-            return Some(vec![tokens[0].clone()]);
-        }
-        if tokens[0].content().chars().collect::<Vec<char>>()[0].is_alphabetic() {
+        if tokens[0].single_char().unwrap_or_default().is_alphabetic() {
             tokens[0].tags.push("letter");
         }
-        Some(vec![tokens[0].clone()])
+        Some(tokens)
     }
 
     fn word_rule(tokens: Vec<Token>) -> Option<Vec<Token>> {
-        if tokens.last().unwrap().has_tag("letter") {
+        if tokens.last().unwrap_or(&empty_token()).has_tag("letter") {
             None
         } else if tokens.len() == 1 {
             Some(tokens)
@@ -109,12 +107,44 @@ mod tests {
         }
     }
 
+    fn int_rule(tokens: Vec<Token>) -> Option<Vec<Token>> {
+        if tokens.len() == 1 {
+            if tokens[0].content() == "0" {
+                Some(vec![wrap(tokens, vec!["int", "posInt"])])
+            } else if tokens[0].has_tag("digit") {
+                None
+            } else {
+                Some(tokens)
+            }
+        } else {
+            if tokens.last().unwrap_or(&empty_token()).has_tag("digit") {
+                None
+            } else {
+                Some(vec![
+                    wrap(tokens[0..tokens.len() - 1].to_vec(), vec!["int", "posInt"]),
+                    tokens.last().unwrap().clone()
+                ])
+            }
+        }
+    }
+
     fn remove_whitespace_rule(tokens: Vec<Token>) -> Option<Vec<Token>> {
         if tokens[0].has_tag("ws") {
             Some(vec![])
         } else {
             Some(tokens)
         }
+    }
+
+    fn digit_rule(mut tokens: Vec<Token>) -> Option<Vec<Token>> {
+        let ch = tokens[0].single_char().unwrap_or_default();
+        if ch.is_digit(10) {
+            tokens[0].tags.push("digit");
+            if ch != '0' {
+                tokens[0].tags.push("nonzero");
+            }
+        }
+        Some(tokens)
     }
 
     #[test]
@@ -130,6 +160,15 @@ mod tests {
             whitespace_rule,
             letter_rule,
             word_rule,
+            remove_whitespace_rule
+        ].to_vec()
+    }
+
+    fn int_rules() -> Vec<impl Fn(Vec<Token>) -> Option<Vec<Token>>> {
+        [
+            whitespace_rule,
+            digit_rule,
+            int_rule,
             remove_whitespace_rule
         ].to_vec()
     }
@@ -151,6 +190,56 @@ mod tests {
                     body: text,
                     indices: 2..7,
                     tags: vec!["word"]
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn big_paragraph_performance() {
+        let text = 
+        "The donkey than rams him.
+        Oh my goodness, but the kangaroo jumps over.
+        And it looks like the seagulls are going for it again!
+        They're just hitting the tank!
+        (To the penguins, attacking a T-Rex)
+        Hit him with your penguin beaks!
+        What are you doing out there?
+        Looks like I gotta do everything myself...
+        Come on, now I'm playing.
+        Get over here, T-Rex. I'll beat you up.
+        Now watch out for my spin attack...";
+        let mut body = str_to_tokens(text);
+        black_box(process_rules(word_rules(), &mut body));
+    }
+
+    #[test]
+    fn apply_ints() {
+        let text = "123 040 k";
+        let mut body = str_to_tokens(text);
+        process_rules(int_rules(), &mut body);
+        assert_eq!(
+            body,
+            vec![
+                Token {
+                    body: text,
+                    indices: 0..3,
+                    tags: vec!["int", "posInt"]
+                },
+                Token {
+                    body: text,
+                    indices: 4..5,
+                    tags: vec!["int", "posInt"]
+                },
+                Token {
+                    body: text,
+                    indices: 5..7,
+                    tags: vec!["int", "posInt"]
+                },
+                Token {
+                    body: text,
+                    indices: 8..9,
+                    tags: vec!["k"]
                 }
             ]
         );

@@ -1,3 +1,5 @@
+# Introduction
+
 Blex is a lightweight lexing framework built in Rust based on the T-Lex framework. Blex is built around the concept of building a set of rules that process a set of tokens. Each rule is run throughout the input string successively, gradually transforming it into an output string of tokens.
 
 ## Tokens
