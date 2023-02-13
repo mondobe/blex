@@ -210,7 +210,9 @@ mod tests {
         Get over here, T-Rex. I'll beat you up.
         Now watch out for my spin attack...";
         let mut body = str_to_tokens(text);
-        black_box(process_rules(word_rules(), &mut body));
+        for _ in 0..1000 {        
+            black_box(process_rules(word_rules(), &mut body));
+        }
     }
 
     #[test]
