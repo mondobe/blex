@@ -108,22 +108,25 @@ mod tests {
     }
 
     fn int_rule(tokens: Vec<Token>) -> Option<Vec<Token>> {
-        if tokens.len() == 1 {
-            if tokens[0].content() == "0" {
-                Some(vec![wrap(tokens, vec!["int", "posInt"])])
-            } else if tokens[0].has_tag("digit") {
-                None
-            } else {
-                Some(tokens)
-            }
-        } else {
-            if tokens.last().unwrap_or(&empty_token()).has_tag("digit") {
-                None
-            } else {
-                Some(vec![
-                    wrap(tokens[0..tokens.len() - 1].to_vec(), vec!["int", "posInt"]),
-                    tokens.last().unwrap().clone()
-                ])
+        match tokens_structure(&tokens) {
+            TokenStructure::Single(tok) => {
+                if tok.content() == "0" {
+                    Some(vec![wrap(tokens, vec!["int", "posInt"])])
+                } else if tok.has_tag("digit") {
+                    None
+                } else {
+                    Some(tokens)
+                }
+            },
+            TokenStructure::Multiple => {
+                if tokens.last().unwrap_or(&empty_token()).has_tag("digit") {
+                    None
+                } else {
+                    Some(vec![
+                        wrap(tokens[0..tokens.len() - 1].to_vec(), vec!["int", "posInt"]),
+                        tokens.last().unwrap().clone()
+                    ])
+                }
             }
         }
     }
@@ -137,11 +140,13 @@ mod tests {
     }
 
     fn digit_rule(mut tokens: Vec<Token>) -> Option<Vec<Token>> {
-        let ch = tokens[0].single_char().unwrap_or_default();
-        if ch.is_digit(10) {
-            tokens[0].tags.push("digit");
-            if ch != '0' {
-                tokens[0].tags.push("nonzero");
+        if let TokenStructure::Single(tok) = tokens_structure(&tokens) {
+            let ch = tok.single_char().unwrap_or_default();
+            if ch.is_digit(10) {
+                tokens[0].tags.push("digit");
+                if ch != '0' {
+                    tokens[0].tags.push("nonzero");
+                }
             }
         }
         Some(tokens)
@@ -171,6 +176,33 @@ mod tests {
             int_rule,
             remove_whitespace_rule
         ].to_vec()
+    }
+    
+    fn ab_rule(tokens: Vec<Token>) -> Option<Vec<Token>> {
+        match tokens_structure(&tokens) {
+            TokenStructure::Single(tok) => {
+                if tok.has_tag("a") {
+                    None
+                } else {
+                    Some(tokens)
+                }
+            },
+            TokenStructure::Multiple => {
+                if tokens[1].has_tag("b") {
+                    Some(vec![wrap(tokens, vec!["c"])])
+                } else {
+                    Some(tokens)
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn apply_ab() {
+        let text = "a b blex ab abab";
+        let mut body = str_to_tokens(text);
+        process_rule(ab_rule, &mut body);
+        print_tokens(body);
     }
 
     #[test]
@@ -250,5 +282,7 @@ mod tests {
     #[test]
     fn has_tag_test() {
         println!("{}", token_from_string("Hi", vec!["test"]).has_tag("test"));
+        print_tokens(str_to_tokens("a b blex ab abab"));
     }
+
 }

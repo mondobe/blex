@@ -38,7 +38,7 @@ pub fn empty_token() -> Token<'static> {
 
 impl <'a>fmt::Display for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}: ", self.content()).unwrap();
+        write!(f, "{:?}: ", self.content()).unwrap();
         for tag in &self.tags {
             write!(f, "{}; ", tag).unwrap();
         };
@@ -81,5 +81,18 @@ pub fn wrap<'a>(tokens: Vec<Token<'a>>, tags: Vec<&'a str>) -> Token<'a> {
         body: tokens[0].body, 
         indices: tokens[0].indices.start..tokens.last().unwrap().indices.end, 
         tags
+    }
+}
+
+pub enum TokenStructure<'a> {
+    Multiple,
+    Single(&'a Token<'a>)
+}
+
+pub fn tokens_structure<'a>(tokens: &'a Vec<Token<'a>>) -> TokenStructure<'a> {
+    if tokens.len() == 1 {
+        TokenStructure::Single(&tokens[0])
+    } else {
+        TokenStructure::Multiple
     }
 }
