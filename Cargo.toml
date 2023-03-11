@@ -6,6 +6,9 @@ license = "GPL-3.0"
 keywords = ["lexer", "lex", "token", "tokenizer", "tokenization"]
 categories = ["development-tools", "parsing"]
 authors = ["Mondobe"]
+description = "A lightweight lexing framework"
+homepage = "https://github.com/mondobe/blex"
+repository = "https://github.com/mondobe/blex"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
