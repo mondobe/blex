@@ -1,13 +1,9 @@
 pub mod token;
 pub use token::*;
 
-/// Processes a rule across a vector of tokens. Starting from the first token,
-/// iteratively applies the rule on a single token. If that application returns
-/// None, continues applying the rule on the token and the next, then the next,
-/// and so on until the function returns Some or there are no tokens left to
-/// process. This process is explained more thoroughly with examples in the 
-/// readme.
-pub fn process_rule(rule: impl Fn(Vec<Token>) -> Option<Vec<Token>>, body: &mut Vec<Token>) {
+/// See [process_rule]. May or may not print a message signifying when each
+/// replacement is made.
+pub fn process_rule_maybe_verbose(rule: impl Fn(Vec<Token>) -> Option<Vec<Token>>, body: &mut Vec<Token>, verbose: bool) {
     // iterate through each starting position in the body
     let mut start_index: usize = 0;
     'current_start: while start_index < body.len() {
@@ -32,10 +28,12 @@ pub fn process_rule(rule: impl Fn(Vec<Token>) -> Option<Vec<Token>>, body: &mut 
         // we know that the returned tokens will exist at this point, so unwrap() is safe
         let replacement: Vec<Token> = applied.unwrap();
 
-        println!("\nReplacing");
-        print_tokens(body[start_index..end_index].to_vec());
-        println!("with");
-        print_tokens(replacement.clone());
+        if verbose {
+            println!("\nReplacing");
+            print_tokens(body[start_index..end_index].to_vec());
+            println!("with");
+            print_tokens(replacement.clone());
+        }
 
         let r_len = replacement.len();
 
@@ -47,10 +45,20 @@ pub fn process_rule(rule: impl Fn(Vec<Token>) -> Option<Vec<Token>>, body: &mut 
     }
 }
 
+/// Processes a rule across a vector of tokens. Starting from the first token,
+/// iteratively applies the rule on a single token. If that application returns
+/// None, continues applying the rule on the token and the next, then the next,
+/// and so on until the function returns Some or there are no tokens left to
+/// process. This process is explained more thoroughly with examples in the 
+/// readme.
+pub fn process_rule(rule: impl Fn(Vec<Token>) -> Option<Vec<Token>>, body: &mut Vec<Token>) {
+    process_rule_maybe_verbose(rule, body, false);
+}
+
 /// Processes multiple rules on a vector of tokens. See [process_rule].
-pub fn process_rules(rules: Vec<impl Fn(Vec<Token>) -> Option<Vec<Token>>>, body: &mut Vec<Token>) {
+pub fn process_rules(rules: Vec<impl Fn(Vec<Token>) -> Option<Vec<Token>>>, body: &mut Vec<Token>, verbose: bool) {
     for rule in rules {
-        process_rule(rule, body);
+        process_rule_maybe_verbose(rule, body, verbose);
     }
 }
 
@@ -223,14 +231,9 @@ mod tests {
 
     #[test]
     fn apply_words() {
-        let text = "
-(define (rgb-series mk)
-  (vc-append
-   (series (lambda (sz) (colorize (mk sz) \"red\")))
-   (series (lambda (sz) (colorize (mk sz) \"green\")))
-   (series (lambda (sz) (colorize (mk sz) \"blue\")))))";
+        let text = "A    space";
         let mut body = str_to_tokens(text);
-        process_rules(word_rules(), &mut body);
+        process_rules(word_rules(), &mut body, false);
         print_tokens(body.clone());
         assert_eq!(
             body,
@@ -264,7 +267,7 @@ mod tests {
         Now watch out for my spin attack...";
         let mut body = str_to_tokens(text);
         for _ in 0..1000 {
-            black_box(process_rules(word_rules(), &mut body));
+            black_box(process_rules(word_rules(), &mut body, false));
         }
     }
 
@@ -272,7 +275,7 @@ mod tests {
     fn apply_ints() {
         let text = "123 040 k";
         let mut body = str_to_tokens(text);
-        process_rules(int_rules(), &mut body);
+        process_rules(int_rules(), &mut body, false);
         assert_eq!(
             body,
             vec![
