@@ -32,9 +32,18 @@ pub fn process_rule(rule: impl Fn(Vec<Token>) -> Option<Vec<Token>>, body: &mut 
         // we know that the returned tokens will exist at this point, so unwrap() is safe
         let replacement: Vec<Token> = applied.unwrap();
 
+        println!("\nReplacing");
+        print_tokens(body[start_index..end_index].to_vec());
+        println!("with");
+        print_tokens(replacement.clone());
+
+        let r_len = replacement.len();
+
         // insert the new tokens where the old ones were
         body.splice(start_index..end_index, replacement);
-        start_index += 1;
+        if r_len >= end_index - start_index {
+            start_index += 1;
+        }
     }
 }
 
@@ -214,9 +223,15 @@ mod tests {
 
     #[test]
     fn apply_words() {
-        let text = "A space";
+        let text = "
+(define (rgb-series mk)
+  (vc-append
+   (series (lambda (sz) (colorize (mk sz) \"red\")))
+   (series (lambda (sz) (colorize (mk sz) \"green\")))
+   (series (lambda (sz) (colorize (mk sz) \"blue\")))))";
         let mut body = str_to_tokens(text);
         process_rules(word_rules(), &mut body);
+        print_tokens(body.clone());
         assert_eq!(
             body,
             vec![
@@ -227,7 +242,7 @@ mod tests {
                 },
                 Token {
                     body: text,
-                    indices: 2..7,
+                    indices: 5..10,
                     tags: vec!["word"]
                 }
             ]
