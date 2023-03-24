@@ -1,6 +1,8 @@
 use std::fmt;
 use std::ops::Range;
 
+use crate::format_tags;
+
 #[derive(Clone, PartialEq, Debug)]
 
 /// A representation of a token. The `body` field points to the underlying string
@@ -51,11 +53,7 @@ pub fn empty_token() -> Token<'static> {
 
 impl<'a> fmt::Display for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}: ", self.content()).unwrap();
-        for tag in &self.tags {
-            write!(f, "{}; ", tag).unwrap();
-        }
-        Ok(())
+        write!(f, "{0:?}: {1}", self.content(), format_tags(self.tags.clone()))
     }
 }
 

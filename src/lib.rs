@@ -62,6 +62,15 @@ pub fn process_rules(rules: Vec<impl Fn(Vec<Token>) -> Option<Vec<Token>>>, body
     }
 }
 
+/// Formats the given vector of strings in the fashion (a; b; c), where a, b,
+/// and c are debug-formatted tags (in order to see escape characters).
+pub fn format_tags(tags: Vec<&str>) -> String {
+    String::from("(") 
+        + &tags.iter()
+            .map(|t| format!("{:?}", t)).collect::<Vec<String>>().join("; ")
+        + ")"
+}
+
 #[cfg(test)]
 mod tests {
     use std::hint::black_box;
